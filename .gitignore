@@ -1,0 +1,2 @@
+# Ignore the kernel. Insert the code for your own compiled kernel in the "linux" folder
+linux/

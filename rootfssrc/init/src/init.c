@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   write(1, "[*] Noble Linux booted\n", 23);
@@ -31,6 +33,22 @@ int main() {
     close(fd);
   }
 
-    for (;;) {}
+  // Move into shell
+  pid_t pid = fork();
+  if (pid == 0) {
+    // child: drop privileges
+    setgid(1000);  // group ID
+    setuid(1000);  // user ID
+    char *argv[] = {"/bin/sh", NULL};
+    execv(argv[0], argv);
+    perror("execv failed");
+    exit(1);
+  } else {
+    // parent: wait for child
+    waitpid(pid, NULL, 0);
+  }
+
+  // Hang
+  for (;;) {}
 }
 

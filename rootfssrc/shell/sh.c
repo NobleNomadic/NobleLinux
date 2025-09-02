@@ -23,7 +23,7 @@ void processCommand(char *commandBuffer) {
     execvp(args[0], args);
 
     // execvp only returns if it fails
-    perror("execvp failed");
+    fprintf(stderr, "Unkown program\n");
     _exit(1);
   } else if (childPid > 0) {
     // Parent process: wait for child to finish

@@ -22,33 +22,47 @@ int main() {
 
   write(1, "[*] Filesystems mounted\n", 24);
 
-  // Try to open /home/.welcome.txt and print contents
-  int fd = open("/home/.welcome", O_RDONLY);
-  if (fd >= 0) {
-    char buf[256];
-    ssize_t n;
-    while ((n = read(fd, buf, sizeof(buf))) > 0) {
-      write(1, buf, n);
-    }
-    close(fd);
+  // Move into first user process
+  // Parse the boot configuration file
+  FILE *bootConfigurationFile = fopen("/etc/boot", "r");
+  if (bootConfigurationFile == 0) {
+    perror("fopen /etc/boot");
+    exit(1);
   }
 
-  // Move into shell
-  pid_t pid = fork();
-  if (pid == 0) {
-    // child: drop privileges
-    setgid(1000);  // group ID
-    setuid(1000);  // user ID
-    char *argv[] = {"/bin/sh", NULL};
+  // Read the first line - path to program to execute first
+  char firstProgramPath[256];
+  // Run fgets on file and check if read succeeded
+  if (fgets(firstProgramPath, sizeof(firstProgramPath), bootConfigurationFile) == NULL) {
+    perror("Failed to read from /etc/boot");
+    exit(1);    
+  }
+  fclose(bootConfigurationFile);
+
+  // Remove trailing newline if present
+  firstProgramPath[strcspn(firstProgramPath, "\n")] = 0;
+
+  // Start child process found in the config file
+  pid_t childPid = fork();
+  if (childPid == 0) {
+    // Setup new process if fork succeeded
+    setgid(1000);
+    setuid(1000);
+    char *argv[] = {firstProgramPath, NULL};
     execv(argv[0], argv);
     perror("execv failed");
     exit(1);
-  } else {
-    // parent: wait for child
-    waitpid(pid, NULL, 0);
+  }
+  // If success, then hang this process
+  else if (childPid > 0) {
+    waitpid(childPid, NULL, 0);
+  }
+  // If fork fails, then exit
+  else {
+    perror("fork failed");
+    exit(1);
   }
 
   // Hang
   for (;;) {}
 }
-
